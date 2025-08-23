@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
@@ -26,6 +26,7 @@ import productsData from '../data/products.json';
 
 const Products = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'All');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('name-asc');
@@ -356,7 +357,7 @@ const Products = () => {
               .filter(product => product.featured)
               .slice(0, 6)
               .map((product) => (
-                <Card key={product.id} className="group hover:shadow-2xl transition-all duration-300 overflow-hidden cursor-pointer transform hover:-translate-y-2" onClick={() => window.location.href = `/product/${product.id}`}>
+                <Card key={product.id} className="group hover:shadow-2xl transition-all duration-300 overflow-hidden cursor-pointer transform hover:-translate-y-2" onClick={() => navigate(`/product/${product.id}`)}>
                   <div className="relative h-64 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent z-10"></div>
                     <img 
@@ -489,7 +490,7 @@ const Products = () => {
             {/* Products Display - Always Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredAndSortedProducts.map((product) => (
-                <Card key={product.id} className="group hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer transform hover:-translate-y-1" onClick={() => window.location.href = `/product/${product.id}`}>
+                <Card key={product.id} className="group hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer transform hover:-translate-y-1" onClick={() => navigate(`/product/${product.id}`)}>
                   <div className="relative h-56 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent z-10"></div>
                     <img 
