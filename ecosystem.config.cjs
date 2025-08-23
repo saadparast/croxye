@@ -1,11 +1,13 @@
 module.exports = {
   apps: [{
     name: 'indian-export-website',
-    script: 'npm',
-    args: 'run dev',
+    script: 'node',
+    args: './server.js',
     cwd: '/home/user/webapp',
+    interpreter: 'node',
     env: {
       NODE_ENV: 'development',
+      HOST: '0.0.0.0',
       PORT: 5173
     },
     watch: false,
