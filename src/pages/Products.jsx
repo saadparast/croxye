@@ -27,7 +27,7 @@ import productsData from '../data/products.json';
 const Products = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'All');
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('name-asc');
   const [showInquiryModal, setShowInquiryModal] = useState(false);
@@ -268,11 +268,11 @@ const Products = () => {
         ></div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl lg:text-5xl font-bold text-white mb-4">
-            Premium Agricultural Products Catalog
+            Our Complete Product Catalog
           </h1>
           <p className="text-xl text-green-50 max-w-3xl mx-auto">
-            Browse our extensive collection of export-quality Indian agricultural products. 
-            All prices on request - we customize orders to your needs.
+            Browse our complete collection of premium export-quality Indian agricultural products. 
+            From spices to grains, Makhana to Moringa - all in one place. Prices on request.
           </p>
         </div>
       </section>
