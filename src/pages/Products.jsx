@@ -1,7 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import EnhancedSearchFilter from '@/components/EnhancedSearchFilter';
+import ProductImageTabs from '@/components/ProductImageTabs';
 import { 
   Search, 
   Filter, 
@@ -20,7 +22,8 @@ import {
   Globe,
   Leaf,
   Shield,
-  ChevronDown
+  ChevronDown,
+  Eye
 } from 'lucide-react';
 import productsData from '../data/products.json';
 
@@ -34,6 +37,9 @@ const Products = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [viewMode, setViewMode] = useState('grid');
   const [showFilters, setShowFilters] = useState(false);
+  const [filteredProducts, setFilteredProducts] = useState(productsData.products);
+  const [showProductPreview, setShowProductPreview] = useState(false);
+  const [previewProduct, setPreviewProduct] = useState(null);
 
   // Get categories from products data
   const categories = useMemo(() => {
@@ -51,38 +57,12 @@ const Products = () => {
     ];
   }, []);
 
-  // Filter and sort products
-  const filteredAndSortedProducts = useMemo(() => {
-    let filtered = productsData.products.filter(product => {
-      const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
-      const matchesSearch = searchTerm === '' || 
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.category.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchesCategory && matchesSearch;
-    });
+  // Handle filtered results from search component
+  const handleFilteredResults = useCallback((filtered) => {
+    setFilteredProducts(filtered);
+  }, []);
 
-    // Sort products
-    const [sortField, sortOrder] = sortBy.split('-');
-    filtered.sort((a, b) => {
-      let comparison = 0;
-      
-      switch (sortField) {
-        case 'name':
-          comparison = a.name.localeCompare(b.name);
-          break;
-        case 'category':
-          comparison = a.category.localeCompare(b.category);
-          break;
-        default:
-          comparison = 0;
-      }
-      
-      return sortOrder === 'desc' ? -comparison : comparison;
-    });
 
-    return filtered;
-  }, [selectedCategory, searchTerm, sortBy]);
 
   const handleInquiry = (product) => {
     setSelectedProduct(product);
@@ -277,66 +257,16 @@ const Products = () => {
         </div>
       </section>
 
-      {/* Search and Controls Bar */}
+      {/* Enhanced Search and Filter Section */}
       <section className="sticky top-0 z-30 bg-white shadow-md py-4">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col lg:flex-row gap-4 items-center">
-            {/* Search */}
-            <div className="relative flex-1 w-full">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Search products by name, category, or description..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-              />
-            </div>
-
-            {/* Controls */}
-            <div className="flex items-center space-x-3">
-              {/* Mobile Filter Toggle */}
-              <Button
-                variant="outline"
-                onClick={() => setShowFilters(!showFilters)}
-                className="lg:hidden"
-              >
-                <Filter className="w-4 h-4 mr-2" />
-                Filters
-              </Button>
-
-              {/* Sort Dropdown */}
-              <div className="flex items-center space-x-2">
-                <ArrowUpDown className="w-4 h-4 text-gray-500" />
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                >
-                  <option value="name-asc">Name (A-Z)</option>
-                  <option value="name-desc">Name (Z-A)</option>
-                  <option value="category-asc">Category (A-Z)</option>
-                  <option value="category-desc">Category (Z-A)</option>
-                </select>
-              </div>
-
-              {/* View Mode Toggle */}
-              <div className="flex items-center border border-gray-300 rounded-md">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`p-2 ${viewMode === 'grid' ? 'bg-orange-100 text-orange-600' : 'text-gray-600'}`}
-                >
-                  <Grid className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`p-2 ${viewMode === 'list' ? 'bg-orange-100 text-orange-600' : 'text-gray-600'}`}
-                >
-                  <List className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </div>
+          <EnhancedSearchFilter
+            products={productsData.products}
+            categories={categories}
+            onFilteredResults={handleFilteredResults}
+            viewMode={viewMode}
+            setViewMode={setViewMode}
+          />
         </div>
       </section>
 
@@ -469,122 +399,240 @@ const Products = () => {
 
           {/* Products Grid */}
           <div>
-              {/* Results Count */}
-              <div className="mb-6 flex items-center justify-between">
-                <p className="text-gray-700">
-                  <span className="font-semibold">{filteredAndSortedProducts.length}</span> products found
-                  {selectedCategory !== 'All' && (
-                    <span className="text-gray-500"> in {selectedCategory}</span>
-                  )}
-                </p>
-                {searchTerm && (
-                  <button
-                    onClick={() => setSearchTerm('')}
-                    className="text-sm text-orange-600 hover:text-orange-700"
-                  >
-                    Clear search
-                  </button>
-                )}
+            {/* Products Display - Grid View */}
+            {viewMode === 'grid' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredProducts.map((product) => (
+                  <Card key={product.id} className="group hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer transform hover:-translate-y-1">
+                    <div className="relative h-56 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent z-10"></div>
+                      <img 
+                        src={product.images?.farming?.url || product.image} 
+                        alt={product.images?.farming?.alt || product.name}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        loading="lazy"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center" style={{display: 'none'}}>
+                        <Package className="w-24 h-24 text-gray-300" />
+                      </div>
+                      
+                      {/* Action Buttons */}
+                      <div className="absolute top-3 right-3 z-20 flex flex-col space-y-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPreviewProduct(product);
+                            setShowProductPreview(true);
+                          }}
+                          className="bg-white/90 backdrop-blur-sm text-gray-700 p-2 rounded-full hover:bg-white"
+                          title="Quick preview"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <div className="absolute top-3 left-3 z-20 flex flex-col space-y-2">
+                        <span className="bg-gradient-to-r from-orange-600 to-orange-700 text-white px-3 py-1 rounded-full text-xs font-medium">
+                          {product.category}
+                        </span>
+                        {product.featured && (
+                          <span className="bg-yellow-500 text-white px-3 py-1 rounded-full text-xs font-medium flex items-center">
+                            <Star className="w-3 h-3 mr-1" />
+                            Featured
+                          </span>
+                        )}
+                        {product.premium && (
+                          <span className="bg-purple-500 text-white px-3 py-1 rounded-full text-xs font-medium">
+                            Premium
+                          </span>
+                        )}
+                      </div>
+                      <div className="absolute bottom-3 right-3 z-20">
+                        <span className="bg-white/90 backdrop-blur-sm text-orange-600 px-3 py-1 rounded-full text-sm font-bold">
+                          {product.price}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <CardContent className="p-5 space-y-4">
+                      <div onClick={() => navigate(`/product/${product.id}`)}>
+                        <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-orange-600 transition-colors line-clamp-1">
+                          {product.name}
+                        </h3>
+                        <p className="text-sm text-gray-600 line-clamp-2">
+                          {product.description}
+                        </p>
+                      </div>
+                      
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-500">Origin:</span>
+                          <span className="font-medium text-gray-700 text-xs">{product.specifications?.origin || 'India'}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-500">Min. Order:</span>
+                          <span className="font-medium text-gray-700 text-xs">{product.specifications?.minOrder || 'Contact'}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex space-x-2">
+                        <Button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleInquiry(product);
+                          }}
+                          className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+                          size="sm"
+                        >
+                          Request Quote
+                        </Button>
+                        <Button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/product/${product.id}`);
+                          }}
+                          variant="outline"
+                          size="sm"
+                        >
+                          Details
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
+            )}
 
-            {/* Products Display - Always Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredAndSortedProducts.map((product) => (
-                <Card key={product.id} className="group hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer transform hover:-translate-y-1" onClick={() => navigate(`/product/${product.id}`)}>
-                  <div className="relative h-56 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent z-10"></div>
-                    <img 
-                      src={product.image} 
-                      alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'flex';
-                      }}
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center" style={{display: 'none'}}>
-                      <Package className="w-24 h-24 text-gray-300" />
-                    </div>
-                    <div className="absolute top-3 left-3 z-20 flex flex-col space-y-2">
-                      <span className="bg-gradient-to-r from-orange-600 to-orange-700 text-white px-3 py-1 rounded-full text-xs font-medium">
-                        {product.category}
-                      </span>
-                      {product.featured && (
-                        <span className="bg-yellow-500 text-white px-3 py-1 rounded-full text-xs font-medium flex items-center">
-                          <Star className="w-3 h-3 mr-1" />
-                          Featured
-                        </span>
-                      )}
-                      {product.premium && (
-                        <span className="bg-purple-500 text-white px-3 py-1 rounded-full text-xs font-medium">
-                          Premium
-                        </span>
-                      )}
-                    </div>
-                    <div className="absolute bottom-3 right-3 z-20">
-                      <span className="bg-white/90 backdrop-blur-sm text-orange-600 px-3 py-1 rounded-full text-sm font-bold">
-                        {product.price}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <CardContent className="p-5 space-y-4">
-                    <div>
-                      <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-orange-600 transition-colors line-clamp-1">
-                        {product.name}
-                      </h3>
-                      <p className="text-sm text-gray-600 line-clamp-2">
-                        {product.description}
-                      </p>
-                    </div>
-                    
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-500">Origin:</span>
-                        <span className="font-medium text-gray-700 text-xs">{product.specifications?.origin || 'India'}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-500">Min. Order:</span>
-                        <span className="font-medium text-gray-700 text-xs">{product.specifications?.minOrder || 'Contact'}</span>
-                      </div>
-                    </div>
-                    
-                    <Button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleInquiry(product);
-                      }}
-                      className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
-                    >
-                      Request Quote
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            {/* List View */}
+            {viewMode === 'list' && (
+              <div className="space-y-4">
+                {filteredProducts.map((product) => (
+                  <Card key={product.id} className="group hover:shadow-lg transition-all duration-300 overflow-hidden">
+                    <CardContent className="p-6">
+                      <div className="flex flex-col lg:flex-row gap-6">
+                        {/* Image */}
+                        <div className="relative h-48 lg:h-32 lg:w-48 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden rounded-lg flex-shrink-0">
+                          <img 
+                            src={product.images?.farming?.url || product.image} 
+                            alt={product.images?.farming?.alt || product.name}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                            loading="lazy"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center" style={{display: 'none'}}>
+                            <Package className="w-16 h-16 text-gray-300" />
+                          </div>
+                        </div>
 
-              {/* No Results */}
-              {filteredAndSortedProducts.length === 0 && (
-                <div className="text-center py-16">
-                  <Package className="w-20 h-20 text-gray-300 mx-auto mb-4" />
-                  <p className="text-xl text-gray-500 mb-2">No products found</p>
-                  <p className="text-gray-400 mb-6">Try adjusting your search or filters</p>
-                  <div className="space-x-3">
-                    <Button 
-                      onClick={() => {
-                        setSelectedCategory('All');
-                        setSearchTerm('');
-                      }}
-                      variant="outline"
-                    >
-                      Clear All Filters
-                    </Button>
-                    <Button asChild>
-                      <Link to="/contact">Request Custom Product</Link>
-                    </Button>
-                  </div>
+                        {/* Content */}
+                        <div className="flex-1 space-y-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2 mb-2">
+                                <span className="bg-gradient-to-r from-orange-600 to-orange-700 text-white px-3 py-1 rounded-full text-xs font-medium">
+                                  {product.category}
+                                </span>
+                                {product.featured && (
+                                  <span className="bg-yellow-500 text-white px-3 py-1 rounded-full text-xs font-medium flex items-center">
+                                    <Star className="w-3 h-3 mr-1" />
+                                    Featured
+                                  </span>
+                                )}
+                                {product.premium && (
+                                  <span className="bg-purple-500 text-white px-3 py-1 rounded-full text-xs font-medium">
+                                    Premium
+                                  </span>
+                                )}
+                              </div>
+                              <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-orange-600 transition-colors cursor-pointer"
+                                  onClick={() => navigate(`/product/${product.id}`)}
+                              >
+                                {product.name}
+                              </h3>
+                              <p className="text-gray-600 line-clamp-2">
+                                {product.description}
+                              </p>
+                            </div>
+                            <div className="text-right ml-4">
+                              <span className="text-2xl font-bold text-orange-600">
+                                {product.price}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                            <div>
+                              <span className="text-gray-500">Origin:</span>
+                              <p className="font-medium">{product.specifications?.origin || 'India'}</p>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Min. Order:</span>
+                              <p className="font-medium">{product.specifications?.minOrder || 'Contact'}</p>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Packaging:</span>
+                              <p className="font-medium">{product.specifications?.packaging || 'Various'}</p>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Certification:</span>
+                              <p className="font-medium">{product.specifications?.certification || 'Standard'}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex space-x-3">
+                            <Button 
+                              onClick={() => handleInquiry(product)}
+                              className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+                            >
+                              <Mail className="w-4 h-4 mr-2" />
+                              Request Quote
+                            </Button>
+                            <Button 
+                              onClick={() => navigate(`/product/${product.id}`)}
+                              variant="outline"
+                            >
+                              View Details
+                            </Button>
+                            <Button 
+                              onClick={() => {
+                                setPreviewProduct(product);
+                                setShowProductPreview(true);
+                              }}
+                              variant="outline"
+                              size="sm"
+                            >
+                              <Eye className="w-4 h-4 mr-2" />
+                              Preview
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {/* No Results */}
+            {filteredProducts.length === 0 && (
+              <div className="text-center py-16">
+                <Package className="w-20 h-20 text-gray-300 mx-auto mb-4" />
+                <p className="text-xl text-gray-500 mb-2">No products found</p>
+                <p className="text-gray-400 mb-6">Try adjusting your search or filters</p>
+                <div className="space-x-3">
+                  <Button asChild>
+                    <Link to="/contact">Request Custom Product</Link>
+                  </Button>
                 </div>
-              )}
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -607,6 +655,119 @@ const Products = () => {
       </section>
 
       <InquiryModal />
+      
+      {/* Product Preview Modal */}
+      {showProductPreview && previewProduct && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold text-gray-900">Product Preview</h3>
+                <button
+                  onClick={() => setShowProductPreview(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Image Tabs */}
+                <div>
+                  <ProductImageTabs product={previewProduct} />
+                </div>
+
+                {/* Product Info */}
+                <div className="space-y-6">
+                  <div>
+                    <div className="flex items-center space-x-2 mb-3">
+                      <span className="bg-gradient-to-r from-orange-600 to-orange-700 text-white px-3 py-1 rounded-full text-sm font-medium">
+                        {previewProduct.category}
+                      </span>
+                      {previewProduct.featured && (
+                        <span className="bg-yellow-500 text-white px-3 py-1 rounded-full text-xs font-medium flex items-center">
+                          <Star className="w-3 h-3 mr-1" />
+                          Featured
+                        </span>
+                      )}
+                      {previewProduct.premium && (
+                        <span className="bg-purple-500 text-white px-3 py-1 rounded-full text-xs font-medium">
+                          Premium
+                        </span>
+                      )}
+                    </div>
+                    <h2 className="text-3xl font-bold text-gray-900 mb-4">{previewProduct.name}</h2>
+                    <p className="text-lg text-gray-600 mb-6">{previewProduct.description}</p>
+                  </div>
+
+                  {/* Specifications */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-center space-x-3">
+                      <MapPin className="w-5 h-5 text-gray-400" />
+                      <div>
+                        <p className="text-sm text-gray-500">Origin</p>
+                        <p className="font-medium">{previewProduct.specifications?.origin || 'India'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <Package className="w-5 h-5 text-gray-400" />
+                      <div>
+                        <p className="text-sm text-gray-500">Min. Order</p>
+                        <p className="font-medium">{previewProduct.specifications?.minOrder || 'Contact'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <Shield className="w-5 h-5 text-gray-400" />
+                      <div>
+                        <p className="text-sm text-gray-500">Certification</p>
+                        <p className="font-medium">{previewProduct.specifications?.certification || 'Standard'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <Truck className="w-5 h-5 text-gray-400" />
+                      <div>
+                        <p className="text-sm text-gray-500">Packaging</p>
+                        <p className="font-medium">{previewProduct.specifications?.packaging || 'Various'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Price */}
+                  <div className="bg-gradient-to-r from-orange-50 to-yellow-50 p-6 rounded-lg">
+                    <p className="text-sm text-gray-600 mb-1">Price</p>
+                    <p className="text-3xl font-bold text-orange-600">{previewProduct.price}</p>
+                    <p className="text-sm text-gray-500 mt-2">Contact for bulk pricing and custom packaging</p>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Button 
+                      onClick={() => {
+                        setShowProductPreview(false);
+                        handleInquiry(previewProduct);
+                      }}
+                      className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+                    >
+                      <Mail className="w-4 h-4 mr-2" />
+                      Request Quote
+                    </Button>
+                    <Button 
+                      onClick={() => {
+                        setShowProductPreview(false);
+                        navigate(`/product/${previewProduct.id}`);
+                      }}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      View Full Details
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

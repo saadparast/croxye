@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import ProductImageTabs from '@/components/ProductImageTabs';
 import {
   ArrowLeft,
   Package,
@@ -332,29 +333,9 @@ const ProductDetail = () => {
       <section className="bg-white py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            {/* Image Gallery */}
+            {/* Dynamic Image Tabs */}
             <div>
-              <div className="relative h-96 bg-gray-100 rounded-lg overflow-hidden mb-4">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Camera className="w-20 h-20 text-gray-300" />
-                  <span className="absolute bottom-4 left-4 bg-black/50 text-white px-3 py-1 rounded text-sm">
-                    Product Image {selectedImage + 1}
-                  </span>
-                </div>
-              </div>
-              <div className="grid grid-cols-4 gap-2">
-                {[1, 2, 3, 4].map((num, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setSelectedImage(index)}
-                    className={`h-20 bg-gray-100 rounded border-2 ${
-                      selectedImage === index ? 'border-orange-500' : 'border-transparent'
-                    } hover:border-orange-300 transition-colors flex items-center justify-center`}
-                  >
-                    <Camera className="w-8 h-8 text-gray-300" />
-                  </button>
-                ))}
-              </div>
+              <ProductImageTabs product={product} />
             </div>
 
             {/* Product Info */}
